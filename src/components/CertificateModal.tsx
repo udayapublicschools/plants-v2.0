@@ -98,8 +98,8 @@ export default function CertificateModal({ student, lang, level, rank, onClose }
           {/* Lower layout signatures & stamps */}
           <div className="w-full grid grid-cols-2 gap-8 mt-4 pt-6 border-t border-dashed border-amber-300">
             {/* Stamp side */}
-            <div className="flex flex-col items-center justify-center relative">
-              <div className="w-16 h-16 rounded-full border-4 border-emerald-600/30 flex items-center justify-center text-emerald-800 font-serif font-black text-[9px] leading-tight select-none transform hover:rotate-12 transition-all p-1.5 text-center">
+            <div className="flex flex-col items-center justify-center relative opacity-0 pointer-events-none">
+              <div className="w-16 h-16 rounded-full border-4 border-emerald-600/30 flex items-center justify-center text-emerald-800 font-serif font-black text-[9px] leading-tight select-none p-1.5 text-center">
                 WED-2026 APPROVED SEAL
               </div>
               <span className="text-[10px] text-slate-400 font-bold mt-1">
@@ -109,11 +109,11 @@ export default function CertificateModal({ student, lang, level, rank, onClose }
 
             {/* Signature side */}
             <div className="flex flex-col items-center justify-end">
-              <div className="font-serif italic text-emerald-850 font-black border-b border-amber-800 w-32 pb-0.5 text-center text-xs md:text-sm">
-                S. S. Ramanujan
+              <div className="font-serif italic text-emerald-850 font-black border-b border-amber-800 w-32 pb-0.5 text-center text-xs md:text-sm h-5">
+                {"\u00A0"}
               </div>
               <span className="text-[10px] text-slate-500 font-extrabold mt-1 text-center">
-                {isEn ? 'Educator / Coordinator' : 'शिक्षक / संयोजक'}
+                {"\u00A0"}
               </span>
             </div>
           </div>

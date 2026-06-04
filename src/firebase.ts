@@ -8,29 +8,12 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import workspaceConfig from '../firebase-applet-config.json';
 
-// User's custom web app Firebase configuration
-const customConfig = {
-  apiKey: "AIzaSyCWqTXu-Qm2-p81zVBS4EdMqUsdTJ6ywXU",
-  authDomain: "plant-68b31.firebaseapp.com",
-  projectId: "plant-68b31",
-  storageBucket: "plant-68b31.firebasestorage.app",
-  messagingSenderId: "342854070064",
-  appId: "1:342854070064:web:357b5edcfb7b2c022fe2f5",
-  measurementId: "G-SFML8HBQMW"
-};
-
-// Check if we should use the built-in, secure workspace database
-// Default to 'true' (use sandbox workspace) if not explicitly set to 'false'.
-const useSandbox = localStorage.getItem('ecoplanter_use_sandbox') !== 'false';
-
-const firebaseConfig = useSandbox ? workspaceConfig : customConfig;
+const firebaseConfig = workspaceConfig;
 
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore with appropriate database ID if using workspaceConfig sandbox
-export const db = useSandbox 
-  ? getFirestore(app, (workspaceConfig as any).firestoreDatabaseId)
-  : getFirestore(app);
+// Initialize Firestore
+export const db = getFirestore(app, (workspaceConfig as any).firestoreDatabaseId);
 
 export const auth = getAuth();
 
