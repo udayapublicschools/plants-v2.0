@@ -94,6 +94,10 @@ export default function App() {
   // Interactive Quiz tips loop indices
   const [tipIndex, setTipIndex] = useState(0);
 
+  // Database connection errors caching
+  const [permissionError, setPermissionError] = useState<string | null>(null);
+  const [failingCollection, setFailingCollection] = useState<string | null>(null);
+
   // 1. Initial State mount & Firestore cloud synchronization listeners
   useEffect(() => {
     const loggedInId = localStorage.getItem(LOCAL_STORAGE_KEY_LOGGED_IN_ID);
@@ -130,7 +134,9 @@ export default function App() {
         }
       },
       (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'students');
+        console.error('Firestore students onSnapshot permission error:', error);
+        setPermissionError(error.message);
+        setFailingCollection('students');
       }
     );
 
@@ -144,7 +150,9 @@ export default function App() {
         setPlants(plantList);
       },
       (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'plants');
+        console.error('Firestore plants onSnapshot permission error:', error);
+        setPermissionError(error.message);
+        setFailingCollection('plants');
       }
     );
 
@@ -159,7 +167,9 @@ export default function App() {
         setDeleteLogs(logList);
       },
       (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'deleteLogs');
+        console.error('Firestore deleteLogs onSnapshot permission error:', error);
+        setPermissionError(error.message);
+        setFailingCollection('deleteLogs');
       }
     );
 
@@ -173,7 +183,9 @@ export default function App() {
         setCustomBadges(badgeList);
       },
       (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'customBadges');
+        console.error('Firestore customBadges onSnapshot permission error:', error);
+        setPermissionError(error.message);
+        setFailingCollection('customBadges');
       }
     );
 
@@ -554,6 +566,51 @@ export default function App() {
     <div className="leaf-bg min-h-screen text-slate-800 flex flex-col justify-between transition-all duration-300 font-sans">
       {/* Visual background elements */}
       <div className="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-0 bg-radial from-emerald-100/40 via-sky-50/10 to-transparent"></div>
+
+      {/* Dynamic database permission warning banner */}
+      {permissionError && (
+        <div className="bg-amber-50 border-b border-amber-200 p-4 relative z-50 shadow-sm">
+          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex gap-3">
+              <div className="p-2 bg-amber-100 text-amber-800 rounded-lg shrink-0 mt-0.5">
+                <ShieldAlert className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-semibold text-amber-900 text-sm md:text-base">
+                  {lang === 'en' ? 'Database Connection Restricted' : 'डेटाबेस कनेक्शन सीमित है'}
+                </h4>
+                <p className="text-xs text-amber-700 leading-relaxed max-w-3xl">
+                  {lang === 'en'
+                    ? `Your custom Firebase project (plant-68b31) returned "Missing or insufficient permissions" when trying to load "${failingCollection || 'data'}". This happens because Firestore Security Rules are not yet deployed inside your project or Firestore isn't fully enabled there.`
+                    : `आपके कस्टम फ़ायरबेस प्रोजेक्ट (plant-68b31) ने "${failingCollection || 'data'}" लोड करते समय अनुमति न होने की त्रुटि दी। ऐसा इसलिए हुआ क्योंकि आपके प्रोजेक्ट में सुरक्षा नियम (Rules) सेट नहीं हैं।`}
+                </p>
+                <div className="pt-2 text-xs text-amber-800 leading-normal font-mono bg-amber-100/55 p-2 rounded max-h-[100px] overflow-auto select-all">
+                  {`// Copy & Paste this rule inside your Firebase Developer Console (Firestore -> Rules tab):\n\nallow read, write: if true;`}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full md:w-auto">
+              <button
+                onClick={() => {
+                  localStorage.setItem('ecoplanter_use_sandbox', 'true');
+                  window.location.reload();
+                }}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-4 py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                {lang === 'en' ? 'Switch to Working Sandbox' : 'सैंडबॉक्स का उपयोग करें'}
+              </button>
+              <button
+                onClick={() => setPermissionError(null)}
+                className="bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium text-xs px-3 py-2.5 rounded-lg transition-colors text-center cursor-pointer"
+              >
+                {lang === 'en' ? 'Dismiss' : 'खारिज करें'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Sparkly Confetti Animation Effect */}
       {celebrating && (
