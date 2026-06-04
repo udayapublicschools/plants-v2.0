@@ -19,11 +19,9 @@ import PlantSeedModal from './components/PlantSeedModal';
 import PlantDetailModal from './components/PlantDetailModal';
 import AdminStudentModal from './components/AdminStudentModal';
 import { Sparkles, Trophy, BookOpen, UserPlus, LogIn, ShieldAlert } from 'lucide-react';
+import { collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from './firebase';
 
-const LOCAL_STORAGE_KEY_STUDENTS = 'ecoplanter_students_v1';
-const LOCAL_STORAGE_KEY_PLANTS = 'ecoplanter_plants_v1';
-const LOCAL_STORAGE_KEY_DELETELOGS = 'ecoplanter_deletelogs_v1';
-const LOCAL_STORAGE_KEY_CUSTOM_BADGES = 'ecoplanter_custom_badges_v1';
 const LOCAL_STORAGE_KEY_LOGGED_IN_ID = 'ecoplanter_logged_in_student_id_v1';
 
 // Initial mockup data so the school coordinator has a populated directory in dev/preview
@@ -96,71 +94,96 @@ export default function App() {
   // Interactive Quiz tips loop indices
   const [tipIndex, setTipIndex] = useState(0);
 
-  // 1. Initial State mount & storage sync
+  // 1. Initial State mount & Firestore cloud synchronization listeners
   useEffect(() => {
-    const rawStudents = localStorage.getItem(LOCAL_STORAGE_KEY_STUDENTS);
-    const rawPlants = localStorage.getItem(LOCAL_STORAGE_KEY_PLANTS);
-    const rawLogs = localStorage.getItem(LOCAL_STORAGE_KEY_DELETELOGS);
-    const rawBadges = localStorage.getItem(LOCAL_STORAGE_KEY_CUSTOM_BADGES);
     const loggedInId = localStorage.getItem(LOCAL_STORAGE_KEY_LOGGED_IN_ID);
-
-    let loadedStudents = INITIAL_STUDENTS;
-    if (rawStudents) {
-      loadedStudents = JSON.parse(rawStudents);
-      setStudents(loadedStudents);
-    } else {
-      setStudents(INITIAL_STUDENTS);
-      localStorage.setItem(LOCAL_STORAGE_KEY_STUDENTS, JSON.stringify(INITIAL_STUDENTS));
-    }
-
-    if (rawPlants) {
-      setPlants(JSON.parse(rawPlants));
-    } else {
-      setPlants(INITIAL_PLANTS);
-      localStorage.setItem(LOCAL_STORAGE_KEY_PLANTS, JSON.stringify(INITIAL_PLANTS));
-    }
-
-    if (rawLogs) {
-      setDeleteLogs(JSON.parse(rawLogs));
-    } else {
-      setDeleteLogs([]);
-    }
-
-    if (rawBadges) {
-      setCustomBadges(JSON.parse(rawBadges));
-    } else {
-      setCustomBadges([]);
-    }
-
     if (loggedInId) {
-      const match = loadedStudents.find((s) => s.studentId === loggedInId);
-      if (match) {
-        setCurrentStudent(match);
-        setScreen('student-dash');
-      }
+      setScreen('student-dash');
     }
+
+    const unsubStudents = onSnapshot(
+      collection(db, 'students'),
+      (snapshot) => {
+        const studentList: Student[] = [];
+        snapshot.forEach((docSnap) => {
+          studentList.push(docSnap.data() as Student);
+        });
+
+        if (studentList.length === 0) {
+          // If Firestore is empty, seed it with INITIAL_STUDENTS so workspace stays hydrated
+          INITIAL_STUDENTS.forEach(async (s) => {
+            try {
+              await setDoc(doc(db, 'students', s.studentId), s);
+            } catch (err) {
+              console.error('Error seeding default student:', err);
+            }
+          });
+        } else {
+          setStudents(studentList);
+          const currentId = localStorage.getItem(LOCAL_STORAGE_KEY_LOGGED_IN_ID);
+          if (currentId) {
+            const match = studentList.find((s) => s.studentId === currentId);
+            if (match) {
+              setCurrentStudent(match);
+            }
+          }
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'students');
+      }
+    );
+
+    const unsubPlants = onSnapshot(
+      collection(db, 'plants'),
+      (snapshot) => {
+        const plantList: Plant[] = [];
+        snapshot.forEach((docSnap) => {
+          plantList.push(docSnap.data() as Plant);
+        });
+        setPlants(plantList);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'plants');
+      }
+    );
+
+    const unsubLogs = onSnapshot(
+      collection(db, 'deleteLogs'),
+      (snapshot) => {
+        const logList: DeleteLog[] = [];
+        snapshot.forEach((docSnap) => {
+          logList.push(docSnap.data() as DeleteLog);
+        });
+        logList.sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime());
+        setDeleteLogs(logList);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'deleteLogs');
+      }
+    );
+
+    const unsubBadges = onSnapshot(
+      collection(db, 'customBadges'),
+      (snapshot) => {
+        const badgeList: BadgeDef[] = [];
+        snapshot.forEach((docSnap) => {
+          badgeList.push(docSnap.data() as BadgeDef);
+        });
+        setCustomBadges(badgeList);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'customBadges');
+      }
+    );
+
+    return () => {
+      unsubStudents();
+      unsubPlants();
+      unsubLogs();
+      unsubBadges();
+    };
   }, []);
-
-  // Sync back to local storage whenever collections change
-  const updateStudentsDatabase = (updatedStudents: Student[]) => {
-    setStudents(updatedStudents);
-    localStorage.setItem(LOCAL_STORAGE_KEY_STUDENTS, JSON.stringify(updatedStudents));
-  };
-
-  const updatePlantsDatabase = (updatedPlants: Plant[]) => {
-    setPlants(updatedPlants);
-    localStorage.setItem(LOCAL_STORAGE_KEY_PLANTS, JSON.stringify(updatedPlants));
-  };
-
-  const updateDeleteLogsDatabase = (updatedLogs: DeleteLog[]) => {
-    setDeleteLogs(updatedLogs);
-    localStorage.setItem(LOCAL_STORAGE_KEY_DELETELOGS, JSON.stringify(updatedLogs));
-  };
-
-  const updateCustomBadgesDatabase = (updatedBadges: BadgeDef[]) => {
-    setCustomBadges(updatedBadges);
-    localStorage.setItem(LOCAL_STORAGE_KEY_CUSTOM_BADGES, JSON.stringify(updatedBadges));
-  };
 
   const handleToggleLang = () => {
     setLang((prev) => (prev === 'en' ? 'hi' : 'en'));
@@ -184,8 +207,8 @@ export default function App() {
     setToast((prev) => ({ ...prev, visible: false }));
   };
 
-  // 2. Auth handlers
-  const handleRegistrationCompleted = (name: string, classStr: string, pass: string) => {
+  // 2. Auth handlers synced with Firestore
+  const handleRegistrationCompleted = async (name: string, classStr: string, pass: string) => {
     const randomId = `WED-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const newStudent: Student = {
@@ -198,21 +221,23 @@ export default function App() {
       createdAt: new Date().toISOString(),
     };
 
-    // No auto plants added for students on registration! Garden starts empty.
-    const updatedStudents = [...students, newStudent];
-    updateStudentsDatabase(updatedStudents);
+    try {
+      await setDoc(doc(db, 'students', randomId), newStudent);
 
-    setJustRegisteredStudent(newStudent);
-    setCurrentStudent(newStudent);
-    localStorage.setItem(LOCAL_STORAGE_KEY_LOGGED_IN_ID, newStudent.studentId);
-    setScreen('reg-success');
-    triggerCelebration();
+      setJustRegisteredStudent(newStudent);
+      setCurrentStudent(newStudent);
+      localStorage.setItem(LOCAL_STORAGE_KEY_LOGGED_IN_ID, newStudent.studentId);
+      setScreen('reg-success');
+      triggerCelebration();
 
-    const textSuccess = lang === 'en' ? 'Account Created!' : 'खाता बन गया!';
-    const descSuccess = lang === 'en'
-      ? `Welcome ${name}! Take note of your credentials.`
-      : `स्वागत है ${name}! अपना लॉग इन विवरण याद रखें।`;
-    showToastSuccess(textSuccess, descSuccess, '🎉');
+      const textSuccess = lang === 'en' ? 'Account Created!' : 'खाता बन गया!';
+      const descSuccess = lang === 'en'
+        ? `Welcome ${name}! Take note of your credentials.`
+        : `स्वागत है ${name}! अपना लॉग इन विवरण याद रखें।`;
+      showToastSuccess(textSuccess, descSuccess, '🎉');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `students/${randomId}`);
+    }
   };
 
   const handleLoginSubmit = (studentId: string, pass: string) => {
@@ -273,13 +298,14 @@ export default function App() {
     showToastSuccess(textOut, lang === 'en' ? 'Returned to portal selection' : 'पोर्टल चयन पर वापस आ गए', '🚪');
   };
 
-  // 3. Plant garden action loops
-  const handleAddNewPlantSeed = (type: string, nickname: string) => {
+  // 3. Plant garden action loops synced with Firestore
+  const handleAddNewPlantSeed = async (type: string, nickname: string) => {
     if (!currentStudent) return;
 
     const nowIso = new Date().toISOString();
+    const plantId = `plant-custom-${Date.now()}`;
     const newPlant: Plant = {
-      id: `plant-custom-${Date.now()}`,
+      id: plantId,
       studentId: currentStudent.studentId,
       plantType: type,
       nickname,
@@ -293,42 +319,35 @@ export default function App() {
       lastFedAt: nowIso,
     };
 
-    const updatedPlants = [...plants, newPlant];
-    updatePlantsDatabase(updatedPlants);
+    try {
+      // Save new plant doc to Firestore
+      await setDoc(doc(db, 'plants', plantId), newPlant);
 
-    // Give reward points for planting a new species
-    const updatedStudents = students.map((s) => {
-      if (s.studentId === currentStudent.studentId) {
-        const extraBadges = [...s.badges];
-        if (!extraBadges.includes('first-plant')) {
-          extraBadges.push('first-plant');
-        }
-        return {
-          ...s,
-          xp: s.xp + 15,
-          badges: extraBadges,
-        };
+      // Reward points to student
+      const updatedStudent: Student = {
+        ...currentStudent,
+        xp: currentStudent.xp + 15,
+      };
+      if (!updatedStudent.badges.includes('first-plant')) {
+        updatedStudent.badges = [...updatedStudent.badges, 'first-plant'];
       }
-      return s;
-    });
 
-    updateStudentsDatabase(updatedStudents);
+      await setDoc(doc(db, 'students', currentStudent.studentId), updatedStudent);
 
-    // Refresh memory cache
-    const updatedS = updatedStudents.find((s) => s.studentId === currentStudent.studentId);
-    if (updatedS) setCurrentStudent(updatedS);
+      setIsSeedModalOpen(false);
+      triggerCelebration();
 
-    setIsSeedModalOpen(false);
-    triggerCelebration();
-
-    const titleMsg = lang === 'en' ? 'Seed Sown Successfully!' : 'बीज सफलतापूर्वक बोया गया!';
-    const descMsg = lang === 'en'
-      ? `You planted ${nickname}. Go water it to see it grow!`
-      : `आपने ${nickname} को बोया है। इसे विकसित देखने के लिए पानी दें!`;
-    showToastSuccess(titleMsg, descMsg, '🌱');
+      const titleMsg = lang === 'en' ? 'Seed Sown Successfully!' : 'बीज सफलतापूर्वक बोया गया!';
+      const descMsg = lang === 'en'
+        ? `You planted ${nickname}. Go water it to see it grow!`
+        : `आपने ${nickname} को बोया है। इसे विकसित देखने के लिए पानी दें!`;
+      showToastSuccess(titleMsg, descMsg, '🌱');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `plants/${plantId}`);
+    }
   };
 
-  const handleNurtureActivated = (action: 'water' | 'sun' | 'feed') => {
+  const handleNurtureActivated = async (action: 'water' | 'sun' | 'feed') => {
     if (!currentStudent || !activeDetailPlant) return;
 
     // Check if fully grown limits reached
@@ -353,96 +372,75 @@ export default function App() {
     }
 
     const newGrowth = Math.min(activeDetailPlant.growth + growthBonus, 100);
-
     const nowIso = new Date().toISOString();
-    // Map through and update active detail plant
-    const updatedPlants = plants.map((p) => {
-      if (p.id === activeDetailPlant.id) {
-        return {
-          ...p,
-          growth: newGrowth,
-          waterCount: p.waterCount + (action === 'water' ? 1 : 0),
-          sunCount: p.sunCount + (action === 'sun' ? 1 : 0),
-          feedCount: p.feedCount + (action === 'feed' ? 1 : 0),
-          lastWateredAt: action === 'water' ? nowIso : p.lastWateredAt,
-          lastSunAt: action === 'sun' ? nowIso : p.lastSunAt,
-          lastFedAt: action === 'feed' ? nowIso : p.lastFedAt,
-        };
-      }
-      return p;
-    });
 
-    updatePlantsDatabase(updatedPlants);
+    const updatedPlant: Plant = {
+      ...activeDetailPlant,
+      growth: newGrowth,
+      waterCount: activeDetailPlant.waterCount + (action === 'water' ? 1 : 0),
+      sunCount: activeDetailPlant.sunCount + (action === 'sun' ? 1 : 0),
+      feedCount: activeDetailPlant.feedCount + (action === 'feed' ? 1 : 0),
+      lastWateredAt: action === 'water' ? nowIso : activeDetailPlant.lastWateredAt,
+      lastSunAt: action === 'sun' ? nowIso : activeDetailPlant.lastSunAt,
+      lastFedAt: action === 'feed' ? nowIso : activeDetailPlant.lastFedAt,
+    };
 
-    const refreshedPlant = updatedPlants.find((p) => p.id === activeDetailPlant.id);
-    if (refreshedPlant) setActiveDetailPlant(refreshedPlant);
+    const extraBadges = [...currentStudent.badges];
+    if (action === 'water' && updatedPlant.waterCount >= 3 && !extraBadges.includes('water-master')) {
+      extraBadges.push('water-master');
+    }
+    if (action === 'sun' && updatedPlant.sunCount >= 3 && !extraBadges.includes('sun-lover')) {
+      extraBadges.push('sun-lover');
+    }
+    if (newGrowth >= 100 && !extraBadges.includes('fully-grown')) {
+      extraBadges.push('fully-grown');
+      triggerCelebration();
+    }
 
-    // Update Student score points and milestones
-    const updatedStudents = students.map((s) => {
-      if (s.studentId === currentStudent.studentId) {
-        const extraBadges = [...s.badges];
+    const updatedStudent: Student = {
+      ...currentStudent,
+      xp: currentStudent.xp + 10,
+      badges: extraBadges,
+    };
 
-        // Specific limits triggers
-        const targetPlant = updatedPlants.find((p) => p.id === activeDetailPlant.id);
-        if (targetPlant) {
-          if (action === 'water' && targetPlant.waterCount >= 3 && !extraBadges.includes('water-master')) {
-            extraBadges.push('water-master');
-          }
-          if (action === 'sun' && targetPlant.sunCount >= 3 && !extraBadges.includes('sun-lover')) {
-            extraBadges.push('sun-lover');
-          }
-          if (newGrowth >= 100 && !extraBadges.includes('fully-grown')) {
-            extraBadges.push('fully-grown');
-            triggerCelebration();
-          }
-        }
+    try {
+      await setDoc(doc(db, 'plants', updatedPlant.id), updatedPlant);
+      await setDoc(doc(db, 'students', updatedStudent.studentId), updatedStudent);
 
-        return {
-          ...s,
-          xp: s.xp + 10,
-          badges: extraBadges,
-        };
-      }
-      return s;
-    });
+      setActiveDetailPlant(updatedPlant);
 
-    updateStudentsDatabase(updatedStudents);
-
-    const refreshedStudent = updatedStudents.find((s) => s.studentId === currentStudent.studentId);
-    if (refreshedStudent) setCurrentStudent(refreshedStudent);
-
-    const titleCare = lang === 'en' ? 'Care Activity Logged' : 'देखभाल दर्ज की गई';
-    showToastSuccess(titleCare, `+10 XP! ${textActivity}`, '✨');
+      const titleCare = lang === 'en' ? 'Care Activity Logged' : 'देखभाल दर्ज की गई';
+      showToastSuccess(titleCare, `+10 XP! ${textActivity}`, '✨');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `plants/${updatedPlant.id}`);
+    }
   };
 
-  // 4. Coordinator rewards handlers
-  const handleAwardXP = (points: number) => {
+  // 4. Coordinator rewards handlers synced with Firestore
+  const handleAwardXP = async (points: number) => {
     if (!activeAdminStudent) return;
 
-    const updatedStudents = students.map((s) => {
-      if (s.studentId === activeAdminStudent.studentId) {
-        return {
-          ...s,
-          xp: s.xp + points,
-        };
-      }
-      return s;
-    });
+    const updatedStudent: Student = {
+      ...activeAdminStudent,
+      xp: activeAdminStudent.xp + points,
+    };
 
-    updateStudentsDatabase(updatedStudents);
+    try {
+      await setDoc(doc(db, 'students', updatedStudent.studentId), updatedStudent);
+      setActiveAdminStudent(updatedStudent);
 
-    const refreshedS = updatedStudents.find((s) => s.studentId === activeAdminStudent.studentId);
-    if (refreshedS) setActiveAdminStudent(refreshedS);
-
-    const titleAward = lang === 'en' ? 'Green XP Awarded' : 'ग्रीन पॉइंट्स प्रदान किए गए';
-    const descAward = lang === 'en'
-      ? `Successfully rewarded student ${activeAdminStudent.name} with +${points} XP!`
-      : `छात्र ${activeAdminStudent.name} को +${points} XP का पुरस्कार दिया गया!`;
-    showToastSuccess(titleAward, descAward, '🎖️');
-    triggerCelebration();
+      const titleAward = lang === 'en' ? 'Green XP Awarded' : 'ग्रीन पॉइंट्स प्रदान किए गए';
+      const descAward = lang === 'en'
+        ? `Successfully rewarded student ${activeAdminStudent.name} with +${points} XP!`
+        : `छात्र ${activeAdminStudent.name} को +${points} XP का पुरस्कार दिया गया!`;
+      showToastSuccess(titleAward, descAward, '🎖️');
+      triggerCelebration();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `students/${updatedStudent.studentId}`);
+    }
   };
 
-  const handleGrantBadge = (badgeId: string) => {
+  const handleGrantBadge = async (badgeId: string) => {
     if (!activeAdminStudent) return;
 
     if (activeAdminStudent.badges.includes(badgeId)) {
@@ -450,44 +448,35 @@ export default function App() {
       return;
     }
 
-    const updatedStudents = students.map((s) => {
-      if (s.studentId === activeAdminStudent.studentId) {
-        return {
-          ...s,
-          badges: [...s.badges, badgeId],
-          xp: s.xp + 50, // Bonus XP for getting a specialized teacher medal
-        };
-      }
-      return s;
-    });
+    const updatedStudent: Student = {
+      ...activeAdminStudent,
+      badges: [...activeAdminStudent.badges, badgeId],
+      xp: activeAdminStudent.xp + 50, // Bonus XP for getting a specialized teacher medal
+    };
 
-    updateStudentsDatabase(updatedStudents);
+    try {
+      await setDoc(doc(db, 'students', updatedStudent.studentId), updatedStudent);
+      setActiveAdminStudent(updatedStudent);
 
-    const refreshedS = updatedStudents.find((s) => s.studentId === activeAdminStudent.studentId);
-    if (refreshedS) setActiveAdminStudent(refreshedS);
-
-    const titleH = lang === 'en' ? 'Badge Conferred!' : 'अतिरिक्त बैज प्रदान किया गया!';
-    const descH = lang === 'en'
-      ? `Conferred school honor decoration badge to ${activeAdminStudent.name}!`
-      : `${activeAdminStudent.name} को स्कूल पदक से विभूषित किया गया!`;
-    showToastSuccess(titleH, descH, '🏆');
-    triggerCelebration();
+      const titleH = lang === 'en' ? 'Badge Conferred!' : 'अतिरिक्त बैज प्रदान किया गया!';
+      const descH = lang === 'en'
+        ? `Conferred school honor decoration badge to ${activeAdminStudent.name}!`
+        : `${activeAdminStudent.name} को स्कूल पदक से विभूषित किया गया!`;
+      showToastSuccess(titleH, descH, '🏆');
+      triggerCelebration();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `students/${updatedStudent.studentId}`);
+    }
   };
 
-  const handleDeletePlant = (plantId: string) => {
+  const handleDeletePlant = async (plantId: string) => {
     const plantToDelete = plants.find((p) => p.id === plantId);
     if (!plantToDelete) return;
 
-    // Filter out of plants list
-    const updatedPlants = plants.filter((p) => p.id !== plantId);
-    updatePlantsDatabase(updatedPlants);
-
-    // Get student details
     const studentOfPlant = students.find((s) => s.studentId === plantToDelete.studentId);
-
-    // Add to delete log
+    const logId = `log-${Date.now()}`;
     const newLog: DeleteLog = {
-      id: `log-${Date.now()}`,
+      id: logId,
       studentId: plantToDelete.studentId,
       studentName: studentOfPlant?.name || 'Unknown Student',
       classStr: studentOfPlant?.classStr || 'N/A',
@@ -497,22 +486,25 @@ export default function App() {
       deletedAt: new Date().toISOString(),
     };
 
-    const updatedLogs = [newLog, ...deleteLogs];
-    updateDeleteLogsDatabase(updatedLogs);
+    try {
+      await deleteDoc(doc(db, 'plants', plantId));
+      await setDoc(doc(db, 'deleteLogs', logId), newLog);
 
-    // If detail modal is open for this, close it
-    if (activeDetailPlant?.id === plantId) {
-      setActiveDetailPlant(null);
+      if (activeDetailPlant?.id === plantId) {
+        setActiveDetailPlant(null);
+      }
+
+      const titleDel = lang === 'en' ? 'Plant Removed' : 'पौधा हटाया गया';
+      const descDel = lang === 'en' 
+        ? `"${plantToDelete.nickname}" has been deleted from your garden. Your teacher can view this in the delete logs.`
+        : `आपके बगीचे से "${plantToDelete.nickname}" हटा दिया गया है। आपके शिक्षक इसे हटाए गए लॉग में देख सकते हैं।`;
+      showToastSuccess(titleDel, descDel, '🗑️');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `plants/${plantId}`);
     }
-
-    const titleDel = lang === 'en' ? 'Plant Removed' : 'पौधा हटाया गया';
-    const descDel = lang === 'en' 
-      ? `"${plantToDelete.nickname}" has been deleted from your garden. Your teacher can view this in the delete logs.`
-      : `आपके बगीचे से "${plantToDelete.nickname}" हटा दिया गया है। आपके शिक्षक इसे हटाए गए लॉग में देख सकते हैं।`;
-    showToastSuccess(titleDel, descDel, '🗑️');
   };
 
-  const handleCreateBadge = (nameEn: string, nameHi: string, descEn: string, descHi: string, emoji: string, color: string) => {
+  const handleCreateBadge = async (nameEn: string, nameHi: string, descEn: string, descHi: string, emoji: string, color: string) => {
     const badgeId = `badge-custom-${Date.now()}`;
     const newBadge: BadgeDef = {
       id: badgeId,
@@ -523,15 +515,18 @@ export default function App() {
       isCustom: true,
     };
 
-    const updatedBadges = [...customBadges, newBadge];
-    updateCustomBadgesDatabase(updatedBadges);
+    try {
+      await setDoc(doc(db, 'customBadges', badgeId), newBadge);
 
-    const titleCr = lang === 'en' ? 'Custom Badge Created!' : 'नया बैज बनाया गया!';
-    const descCr = lang === 'en' 
-      ? `Successfully added "${nameEn}" badge. Teachers can now award this to students!`
-      : `बैज "${nameHi}" सफलतापूर्वक बनाया गया। अब आप इसे छात्रों को दे सकते हैं!`;
-    showToastSuccess(titleCr, descCr, '🎖️');
-    triggerCelebration();
+      const titleCr = lang === 'en' ? 'Custom Badge Created!' : 'नया बैज बनाया गया!';
+      const descCr = lang === 'en' 
+        ? `Successfully added "${nameEn}" badge. Teachers can now award this to students!`
+        : `बैज "${nameHi}" सफलतापूर्वक बनाया गया। अब आप इसे छात्रों को दे सकते हैं!`;
+      showToastSuccess(titleCr, descCr, '🎖️');
+      triggerCelebration();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `customBadges/${badgeId}`);
+    }
   };
 
   // Copy registration specifics to system clipboard

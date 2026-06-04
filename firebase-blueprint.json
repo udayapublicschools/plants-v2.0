@@ -1,0 +1,195 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "A registered student in the Eco-Planter game",
+      "type": "object",
+      "properties": {
+        "studentId": {
+          "type": "string",
+          "description": "Unique generated student ID"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the student"
+        },
+        "classStr": {
+          "type": "string",
+          "description": "Class partition identifier (e.g. 4-A)"
+        },
+        "password": {
+          "type": "string",
+          "description": "Simple authentication password"
+        },
+        "xp": {
+          "type": "integer",
+          "description": "Accumulated environmental experience points"
+        },
+        "badges": {
+          "type": "array",
+          "description": "Keys of badges earned by the student"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of account creation"
+        }
+      },
+      "required": ["studentId", "name", "classStr", "password", "xp", "badges", "createdAt"]
+    },
+    "Plant": {
+      "title": "Plant",
+      "description": "A virtual plant being nurtured by a student",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique ID of this plant instance"
+        },
+        "studentId": {
+          "type": "string",
+          "description": "ID of the student who owns this plant"
+        },
+        "plantType": {
+          "type": "string",
+          "description": "Type/Preset of the plant"
+        },
+        "nickname": {
+          "type": "string",
+          "description": "Nickname given to the plant by the student"
+        },
+        "growth": {
+          "type": "integer",
+          "description": "Growth progress percentage from 0 to 100"
+        },
+        "waterCount": {
+          "type": "integer",
+          "description": "Total times watered"
+        },
+        "sunCount": {
+          "type": "integer",
+          "description": "Total times exposed to sun"
+        },
+        "feedCount": {
+          "type": "integer",
+          "description": "Total times fed compost"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of when the seed was sown"
+        },
+        "lastWateredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastSunAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastFedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "plantType",
+        "nickname",
+        "growth",
+        "waterCount",
+        "sunCount",
+        "feedCount",
+        "createdAt"
+      ]
+    },
+    "DeleteLog": {
+      "title": "DeleteLog",
+      "description": "Logs of student plants deleted for teachers to monitor",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique log ID"
+        },
+        "studentId": {
+          "type": "string"
+        },
+        "studentName": {
+          "type": "string"
+        },
+        "classStr": {
+          "type": "string"
+        },
+        "plantNickname": {
+          "type": "string"
+        },
+        "plantType": {
+          "type": "string"
+        },
+        "growthWhenDeleted": {
+          "type": "integer"
+        },
+        "deletedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "studentName",
+        "classStr",
+        "plantNickname",
+        "plantType",
+        "growthWhenDeleted",
+        "deletedAt"
+      ]
+    },
+    "BadgeDef": {
+      "title": "BadgeDef",
+      "description": "Description of an earned custom badge",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "en": {
+          "type": "object"
+        },
+        "hi": {
+          "type": "object"
+        },
+        "emoji": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "isCustom": {
+          "type": "boolean"
+        }
+      },
+      "required": ["id", "en", "hi", "emoji", "color"]
+    }
+  },
+  "firestore": {
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Registered students lookup"
+    },
+    "/plants/{plantId}": {
+      "schema": "Plant",
+      "description": "Plants in active development"
+    },
+    "/deleteLogs/{logId}": {
+      "schema": "DeleteLog",
+      "description": "Audit trail logs for plant deletions"
+    },
+    "/customBadges/{badgeId}": {
+      "schema": "BadgeDef",
+      "description": "Custom peer-to-peer badges created by instructors"
+    }
+  }
+}

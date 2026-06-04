@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net: Default Deny All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Generic verification helpers
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function checkString(val, maxLen) {
+      return val is string && val.size() <= maxLen;
+    }
+
+    function checkInt(val, minVal, maxVal) {
+      return val is int && val >= minVal && val <= maxVal;
+    }
+
+    // 2. Students Collection
+    match /students/{studentId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isValidId(studentId)
+        && request.resource.data.studentId == studentId
+        && checkString(request.resource.data.name, 128)
+        && checkString(request.resource.data.classStr, 64)
+        && checkString(request.resource.data.password, 128)
+        && checkInt(request.resource.data.xp, 0, 100000)
+        && request.resource.data.badges is list
+        && checkString(request.resource.data.createdAt, 64);
+      
+      allow update: if isValidId(studentId)
+        && request.resource.data.studentId == studentId
+        && checkString(request.resource.data.name, 128)
+        && checkString(request.resource.data.classStr, 64)
+        && checkString(request.resource.data.password, 128)
+        && checkInt(request.resource.data.xp, 0, 100000)
+        && request.resource.data.badges is list;
+        
+      allow delete: if false; // Students cannot delete educational profiles
+    }
+
+    // 3. Plants Collection
+    match /plants/{plantId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isValidId(plantId)
+        && request.resource.data.id == plantId
+        && checkString(request.resource.data.studentId, 128)
+        && checkString(request.resource.data.plantType, 128)
+        && checkString(request.resource.data.nickname, 128)
+        && checkInt(request.resource.data.growth, 0, 100)
+        && checkInt(request.resource.data.waterCount, 0, 10000)
+        && checkInt(request.resource.data.sunCount, 0, 10000)
+        && checkInt(request.resource.data.feedCount, 0, 10000)
+        && checkString(request.resource.data.createdAt, 64);
+
+      allow update: if isValidId(plantId)
+        && request.resource.data.id == plantId
+        && checkString(request.resource.data.studentId, 128)
+        && checkString(request.resource.data.plantType, 128)
+        && checkString(request.resource.data.nickname, 128)
+        && checkInt(request.resource.data.growth, 0, 100)
+        && checkInt(request.resource.data.waterCount, 0, 10000)
+        && checkInt(request.resource.data.sunCount, 0, 10000)
+        && checkInt(request.resource.data.feedCount, 0, 10000);
+
+      allow delete: if true; // Allowed so kids can edit their garden
+    }
+
+    // 4. Delete Logs Collection (Append-Only)
+    match /deleteLogs/{logId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isValidId(logId)
+        && request.resource.data.id == logId
+        && checkString(request.resource.data.studentId, 128)
+        && checkString(request.resource.data.studentName, 128)
+        && checkString(request.resource.data.classStr, 64)
+        && checkString(request.resource.data.plantNickname, 128)
+        && checkString(request.resource.data.plantType, 128)
+        && checkInt(request.resource.data.growthWhenDeleted, 0, 100)
+        && checkString(request.resource.data.deletedAt, 64);
+
+      allow update, delete: if false; // Immutable audit logs
+    }
+
+    // 5. Custom Badges Collection
+    match /customBadges/{badgeId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isValidId(badgeId)
+        && request.resource.data.id == badgeId
+        && request.resource.data.en is map
+        && request.resource.data.hi is map
+        && checkString(request.resource.data.emoji, 32)
+        && checkString(request.resource.data.color, 256);
+
+      allow update: if isValidId(badgeId);
+      allow delete: if false; // Badges are permanent environmental achievements
+    }
+  }
+}
