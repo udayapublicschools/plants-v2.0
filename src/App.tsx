@@ -504,6 +504,34 @@ export default function App() {
     }
   };
 
+  const handleDeleteStudent = async (studentId: string) => {
+    const studentToDelete = students.find((s) => s.studentId === studentId);
+    if (!studentToDelete) return;
+
+    try {
+      // 1. Delete all plants belonging to this student
+      const studentPlants = plants.filter((p) => p.studentId === studentId);
+      for (const plant of studentPlants) {
+        await deleteDoc(doc(db, 'plants', plant.id));
+      }
+
+      // 2. Delete the student document itself
+      await deleteDoc(doc(db, 'students', studentId));
+
+      if (activeAdminStudent?.studentId === studentId) {
+        setActiveAdminStudent(null);
+      }
+
+      const titleDel = lang === 'en' ? 'Student Deleted' : 'छात्र हटाया गया';
+      const descDel = lang === 'en'
+        ? `Student "${studentToDelete.name}" and all their plants have been successfully deleted from the portal.`
+        : `छात्र "${studentToDelete.name}" और उनके सभी पौधों को पोर्टल से सफलतापूर्वक हटा दिया गया है।`;
+      showToastSuccess(titleDel, descDel, '🗑️');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `students/${studentId}`);
+    }
+  };
+
   const handleCreateBadge = async (nameEn: string, nameHi: string, descEn: string, descHi: string, emoji: string, color: string) => {
     const badgeId = `badge-custom-${Date.now()}`;
     const newBadge: BadgeDef = {
@@ -842,6 +870,7 @@ export default function App() {
                 customBadges={customBadges}
                 onCreateBadge={handleCreateBadge}
                 onManageStudentClick={(student) => setActiveAdminStudent(student)}
+                onDeleteStudent={handleDeleteStudent}
               />
             </motion.div>
           )}
@@ -881,6 +910,7 @@ export default function App() {
             onClose={() => setActiveAdminStudent(null)}
             onAwardXP={handleAwardXP}
             onGrantBadge={handleGrantBadge}
+            onDeleteStudent={handleDeleteStudent}
           />
         )}
       </AnimatePresence>

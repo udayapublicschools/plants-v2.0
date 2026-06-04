@@ -41,7 +41,7 @@ service cloud.firestore {
         && checkInt(request.resource.data.xp, 0, 100000)
         && request.resource.data.badges is list;
         
-      allow delete: if false; // Students cannot delete educational profiles
+      allow delete: if true; // Allowed so administrators can perform pruning of student databases
     }
 
     // 3. Plants Collection

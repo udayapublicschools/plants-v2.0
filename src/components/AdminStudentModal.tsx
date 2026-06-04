@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Student, Plant, AppLanguage, BadgeDef } from '../types';
-import { X, Award, ShieldAlert, Sparkles } from 'lucide-react';
+import { X, Award, ShieldAlert, Sparkles, Trash2 } from 'lucide-react';
 import { TRANSLATIONS } from '../data';
 import { getPlantStageDetail } from './PlantCard';
 
@@ -17,6 +17,7 @@ interface AdminStudentModalProps {
   onClose: () => void;
   onAwardXP: (points: number) => void;
   onGrantBadge: (badgeId: string) => void;
+  onDeleteStudent: (studentId: string) => void;
 }
 
 export default function AdminStudentModal({
@@ -27,13 +28,25 @@ export default function AdminStudentModal({
   onClose,
   onAwardXP,
   onGrantBadge,
+  onDeleteStudent,
 }: AdminStudentModalProps) {
   const trans = TRANSLATIONS[lang];
+
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
 
   if (!student) return null;
 
   // Filter student's plants list
   const studentPlants = plants.filter((p) => p.studentId === student.studentId);
+
+  const handleDelete = () => {
+    if (confirmDelete) {
+      onDeleteStudent(student.studentId);
+      onClose();
+    } else {
+      setConfirmDelete(true);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -198,6 +211,25 @@ export default function AdminStudentModal({
               </p>
             )}
           </div>
+        </div>
+
+        {/* Danger Zone */}
+        <div className="mt-5 pt-4 border-t border-rose-100 font-sans">
+          <button
+            onClick={handleDelete}
+            className={`w-full py-2.5 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm ${
+              confirmDelete
+                ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse'
+                : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-205'
+            }`}
+          >
+            <Trash2 className="w-4 h-4 shrink-0" />
+            <span>
+              {confirmDelete
+                ? (lang === 'en' ? 'Confirm Deletion ⚠️' : 'सत्यापित करें ⚠️')
+                : (lang === 'en' ? 'Delete Student Profile' : 'छात्र प्रोफ़ाइल हटाएं')}
+            </span>
+          </button>
         </div>
       </div>
     </div>

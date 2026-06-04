@@ -17,6 +17,7 @@ interface AdminPanelProps {
   customBadges: BadgeDef[];
   onCreateBadge: (nameEn: string, nameHi: string, descEn: string, descHi: string, emoji: string, color: string) => void;
   onManageStudentClick: (student: Student) => void;
+  onDeleteStudent: (studentId: string) => void;
 }
 
 export default function AdminPanel({
@@ -27,6 +28,7 @@ export default function AdminPanel({
   customBadges = [],
   onCreateBadge,
   onManageStudentClick,
+  onDeleteStudent,
 }: AdminPanelProps) {
   const trans = TRANSLATIONS[lang];
 
@@ -34,6 +36,7 @@ export default function AdminPanel({
 
   const [searchVal, setSearchVal] = useState('');
   const [classFilter, setClassFilter] = useState('ALL');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // New badge creation form states
   const [nameEn, setNameEn] = useState('');
@@ -282,12 +285,42 @@ export default function AdminPanel({
                               {stud.xp} XP
                             </td>
                             <td className="py-3.5 px-4 text-center">
-                              <button
-                                onClick={() => onManageStudentClick(stud)}
-                                className="bg-slate-100 hover:bg-emerald-500 hover:text-white text-slate-650 font-black py-1.5 px-3.5 rounded-xl text-xs transition-all shadow-sm cursor-pointer"
-                              >
-                                🏅 {lang === 'en' ? 'Inspect & Reward' : 'पुरस्कार एवं जांच'}
-                              </button>
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  onClick={() => onManageStudentClick(stud)}
+                                  className="bg-slate-100 hover:bg-emerald-500 hover:text-white text-slate-650 font-black py-1.5 px-3.5 rounded-xl text-xs transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                                >
+                                  🏅 {lang === 'en' ? 'Inspect & Reward' : 'पुरस्कार एवं जांच'}
+                                </button>
+                                {confirmDeleteId === stud.studentId ? (
+                                  <div className="flex items-center gap-1 shrink-0 font-sans">
+                                    <button
+                                      onClick={() => {
+                                        onDeleteStudent(stud.studentId);
+                                        setConfirmDeleteId(null);
+                                      }}
+                                      className="bg-rose-600 hover:bg-rose-700 text-white font-black py-1.5 px-2.5 rounded-xl text-[10px] transition-all cursor-pointer whitespace-nowrap"
+                                      title={lang === 'en' ? 'Confirm permanently deleting student' : 'छात्र को स्थायी रूप से हटाने की पुष्टि करें'}
+                                    >
+                                      ✓
+                                    </button>
+                                    <button
+                                      onClick={() => setConfirmDeleteId(null)}
+                                      className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold py-1.5 px-2.5 rounded-xl text-[10px] transition-all cursor-pointer pointer-events-auto"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => setConfirmDeleteId(stud.studentId)}
+                                    className="bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-600 p-1.5 rounded-xl transition-all shadow-sm cursor-pointer shrink-0"
+                                    title={lang === 'en' ? 'Delete Student' : 'छात्र हटाएं'}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
