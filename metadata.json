@@ -1,0 +1,8 @@
+{
+  "name": "Eco-Planter v2.0",
+  "description": "An interactive environmental planter game and coordinator portal built for World Environment Day to help kids nurture custom plants and classes compete in green missions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
