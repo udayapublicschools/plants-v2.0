@@ -20,9 +20,26 @@ export default function StudentRegister({ lang, onBack, onRegisterSubmit }: Stud
   const [name, setName] = useState('');
   const [selectedClass, setSelectedClass] = useState('4');
   const [selectedSection, setSelectedSection] = useState('A');
+  const [password, setPassword] = useState('');
 
   // Classes list 2 to 12
   const classesList = Array.from({ length: 11 }, (_, i) => String(i + 2));
+
+  // Initial random password generation on mount
+  useEffect(() => {
+    const prefixes = ['green', 'tree', 'seed', 'eco', 'earth', 'leaf', 'flower', 'water', 'sun'];
+    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+    const num = Math.floor(10 + Math.random() * 90);
+    setPassword(`${prefix}${num}`);
+  }, []);
+
+  const handleGeneratePassword = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const prefixes = ['green', 'tree', 'seed', 'eco', 'earth', 'leaf', 'flower', 'water', 'sun'];
+    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+    const num = Math.floor(10 + Math.random() * 90);
+    setPassword(`${prefix}${num}`);
+  };
 
   // Determine section stream options based on class chosen
   const isHighSchool = parseInt(selectedClass) >= 11;
@@ -49,11 +66,10 @@ export default function StudentRegister({ lang, onBack, onRegisterSubmit }: Stud
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !password.trim()) return;
 
     const classStr = `${selectedClass}-${selectedSection}`;
-    // Keep the password same as default standard under the hood, but don't show or ask for it
-    onRegisterSubmit(name.trim(), classStr, 'green35');
+    onRegisterSubmit(name.trim(), classStr, password.trim());
   };
 
   return (
@@ -127,6 +143,32 @@ export default function StudentRegister({ lang, onBack, onRegisterSubmit }: Stud
               ))}
             </select>
           </div>
+        </div>
+
+        {/* Password Selection */}
+        <div>
+          <label className="block text-slate-700 text-sm font-bold mb-1">
+            {trans.lbl_reg_pass}
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full border-2 border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500 text-base font-semibold"
+              placeholder={lang === 'en' ? 'Choose a password' : 'पासवर्ड चुनें'}
+            />
+            <button
+              onClick={handleGeneratePassword}
+              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-extrabold text-xs px-4 rounded-xl transition-all border border-emerald-100 whitespace-nowrap cursor-pointer hover:scale-[1.02] active:scale-95"
+            >
+              {trans.btn_magic}
+            </button>
+          </div>
+          <p className="text-[11px] text-slate-400 mt-1.5 leading-tight font-medium">
+            {trans.reg_pass_note}
+          </p>
         </div>
 
         <button

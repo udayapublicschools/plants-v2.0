@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Plant, AppLanguage } from '../types';
+import { PRESET_SEEDS } from '../data';
 
 interface PlantCardProps {
   plant: Plant;
@@ -15,23 +16,26 @@ interface PlantCardProps {
 
 export function getPlantStageDetail(type: string, growth: number, lang: AppLanguage) {
   let emoji = '🫘';
-  let stageName = lang === 'en' ? 'Seed Phase' : 'बीज अवस्था';
+  let stageName = '';
 
-  if (growth >= 100) {
-    stageName = lang === 'en' ? 'Fully Grown' : 'पूर्ण विकसित';
-    if (type === 'Sunflower') emoji = '🌻';
-    else if (type === 'Tulsi') emoji = '🌳';
-    else if (type === 'Rose') emoji = '🌹';
-    else if (type === 'Tomato') emoji = '🍅';
-  } else if (growth >= 70) {
+  const preset = PRESET_SEEDS.find((s) => s.type === type);
+  const finalEmoji = preset?.emoji || '🌳';
+
+  if (growth >= 80) {
+    emoji = finalEmoji;
+    stageName = lang === 'en' ? 'Fully Grown 🌸' : 'पूर्ण विकसित 🌸';
+  } else if (growth >= 60) {
     emoji = '🪴';
-    stageName = lang === 'en' ? 'Young Plant' : 'युवा पौधा';
+    stageName = lang === 'en' ? 'Growing Plant 🌿' : 'बढ़ता हुआ पौधा 🌿';
   } else if (growth >= 40) {
     emoji = '🌿';
-    stageName = lang === 'en' ? 'Sapling' : 'सपलिंग (छोटा पौधा)';
-  } else if (growth >= 15) {
+    stageName = lang === 'en' ? 'Small Plant 🌱' : 'छोटा पौधा 🌱';
+  } else if (growth >= 20) {
     emoji = '🌱';
-    stageName = lang === 'en' ? 'Sprouting' : 'अंकुरण';
+    stageName = lang === 'en' ? 'Sprout ☘️' : 'अंकुर (Sprout) ☘️';
+  } else {
+    emoji = '🫘';
+    stageName = lang === 'en' ? 'Seed 🫘' : 'बीज अवस्था 🫘';
   }
 
   return { emoji, stageName };

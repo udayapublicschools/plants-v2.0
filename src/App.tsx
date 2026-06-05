@@ -560,7 +560,7 @@ export default function App() {
   // Copy registration specifics to system clipboard
   const handleCopyClipboardInfo = () => {
     if (!justRegisteredStudent) return;
-    const details = `Student ID: ${justRegisteredStudent.studentId}`;
+    const details = `Student ID: ${justRegisteredStudent.studentId}\nPassword: ${justRegisteredStudent.password || '—'}`;
     
     // Copy fallback for cross-browser support
     const textarea = document.createElement('textarea');
@@ -758,7 +758,7 @@ export default function App() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 border-t border-dashed border-emerald-100/60 pt-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-dashed border-emerald-100/60 pt-3.5">
                   <div>
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
                       {trans.succ_lbl_class}
@@ -774,6 +774,15 @@ export default function App() {
                     </span>
                     <span className="text-sm font-bold text-emerald-600 select-all underline decoration-dashed decoration-emerald-450 decoration-2">
                       {justRegisteredStudent.studentId}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                      {trans.succ_lbl_pass}
+                    </span>
+                    <span className="text-sm font-bold text-slate-800 bg-amber-50 border border-amber-100 px-2.5 py-0.5 rounded-lg inline-block">
+                      {justRegisteredStudent.password || '—'}
                     </span>
                   </div>
                 </div>
